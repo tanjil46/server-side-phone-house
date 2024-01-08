@@ -81,6 +81,22 @@ app.put('/phones/:id',async(req,res)=>{
 
 
 
+// const verifyAdmin=async(req,res,next)=>{
+//   const email=req.params.email
+//   const query={email:email}
+//   const user=await userCollection.findOne(query)
+//   const isAdmin=user?.role==='admin'
+  
+//   if(!isAdmin){
+//   return res.status(403).send({message:'Not Allowed'})
+  
+//   }
+  
+//   next()
+  
+  
+//   }
+  
 
 
 
@@ -332,8 +348,13 @@ res.send({
 
 
 
-    await client.db("admin").command({ ping: 1 });
-    console.log("Pinged your deployment. You successfully connected to MongoDB!");
+
+
+
+
+
+    // await client.db("admin").command({ ping: 1 });
+    // console.log("Pinged your deployment. You successfully connected to MongoDB!");
   } finally {
     // Ensures that the client will close when you finish/error
     // await client.close();
