@@ -1,7 +1,7 @@
 const express=require('express')
 const app=express()
 const port=process.env.PORT || 5000;
-
+const stripe = require('stripe')('sk_test_51OEAXTFSdPUsKpuTb2tM6dSW33jFFjOWQA0eVoX1mJeW7u6fGcFY8lrYWsgBvy82U1yUnnscJPv0baOosBVuvqVS00bUo6CuGx')
 require('dotenv').config()
 const cors=require('cors')
 
@@ -32,6 +32,7 @@ async function run() {
     const cartCollection=client.db('phoneHouse').collection('carts')
     const messageCollection=client.db('phoneHouse').collection('messages')
     const replayCollection=client.db('phoneHouse').collection('replay')
+    const paymentCollection=client.db('phoneHouse').collection('payment')
 
 
           // PHONES COLLOCTION
@@ -227,6 +228,100 @@ app.get('/replay',async(req,res)=>{
   const result=await replayCollection.find().toArray()
   res.send(result)
 })
+
+
+
+
+
+
+//PAYMENT    
+
+
+app.post('/create-payment-intent',async(req,res)=>{
+  const {price}=req.body
+
+  const paymentIntent=await stripe.paymentIntents.create({
+  amount:parseInt(price*100),
+  currency:'usd',
+  payment_method_types:['card']
+ })
+
+
+ res.send({
+  clientSecret:paymentIntent.client_secret
+ })
+
+
+})
+
+
+
+
+app.post('/payment',async(req,res)=>{
+  const paymentInfo=req.body
+  console.log('Payment uploded',paymentInfo)
+  const paymentData=await paymentCollection.insertOne(paymentInfo) 
+ const query={_id:{
+  $in:paymentInfo.paymentorCartId.map(id=>new ObjectId(id))
+  
+ }}
+
+ const deleteCart=await cartCollection.deleteMany(query)
+
+
+res.send({paymentData,deleteCart})
+
+
+
+})
+
+app.get('/payment/:email',async(req,res)=>{
+  const paymentorEmail=req.params.email
+  const query={email:paymentorEmail}
+  const result=await paymentCollection.find(query).toArray()
+  res.send(result)
+})
+
+
+
+
+
+
+//ADMIN STATS
+
+app.get('/admin-stats',async(req,res)=>{
+const totalPhone=await phoneCollection.estimatedDocumentCount()
+const totalUser=await userCollection.estimatedDocumentCount()
+const totalMessage=await  messageCollection.estimatedDocumentCount()
+const totalPayments=await paymentCollection.estimatedDocumentCount()
+
+const totalAmount=await paymentCollection.aggregate([
+
+{
+  $group:{
+    _id:null,
+    totalRevenue:{
+      $sum:'$totalAmount'
+    }
+  }
+
+}
+
+
+]).toArray()
+
+const totalMoney=totalAmount.length>0?totalAmount[0].totalRevenue:0
+
+
+
+res.send({
+  totalPhone,totalUser,totalMessage,totalPayments,totalMoney
+})
+
+
+})
+
+
 
 
 
